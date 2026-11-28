@@ -203,3 +203,69 @@ window.RUMBO_SUBJECTS.push({
     }
   ]
 });
+
+// ---------------------------------------------------------------------------
+// NIVEL EXAMEN (agregado el 27-11-2026)
+// Preguntas de varios pasos, escritas siguiendo el temario oficial EPN 2026 y el
+// estilo de las preguntas de ejemplo de la guía oficial EPN 2025-B (operadores
+// definidos, problemas verbales, identidades algebraicas). No son preguntas copiadas
+// de un examen real. El sexto elemento indica la referencia de estilo.
+// ---------------------------------------------------------------------------
+(function () {
+  const EPN = { src: 'Estilo guía oficial EPN' };
+  const add = {
+    m1: [
+      [3, 'Calcula: (2/3 − 5/6)·(−12) + (−3)²·(−4)', ['−34', '38', '−38', '34'], '(2/3 − 5/6) = −1/6; (−1/6)(−12) = 2. (−3)² = 9; 9·(−4) = −36. 2 − 36 = −34.', 'Resuelve cada término por separado y súmalos al final.', EPN],
+      [3, 'Se define a ⊕ b = (a − 2b)/(a + b). Calcula 4 ⊕ 1.', ['2/5', '3/5', '6/5', '2/3'], '(4 − 2·1)/(4 + 1) = 2/5.', 'Reemplaza a = 4 y b = 1 en la definición.', EPN],
+      [3, 'De un tanque se usan 2/7 de su capacidad y quedan 150 litros. ¿Cuál es la capacidad del tanque?', ['210 L', '525 L', '60 L', '175 L'], 'Queda 5/7 de la capacidad: (5/7)·C = 150 → C = 210 L.', '¿Qué fracción del tanque queda?', EPN]
+    ],
+    m2: [
+      [3, 'Simplifica: (8^(1/3) · 4^(3/2)) / 2⁻²', ['2⁶', '2⁴', '2³', '2⁻²'], '8^(1/3) = 2; 4^(3/2) = 8 = 2³. 2·2³ = 2⁴. Dividir entre 2⁻² suma 2: 2⁶.', 'Escribe todo como potencia de 2.', EPN],
+      [3, 'Si 9^x = 27, ¿cuánto vale x?', ['3/2', '3', '2/3', '1/3'], '9^x = 3^(2x) y 27 = 3³. 2x = 3 → x = 3/2.', 'Escribe 9 y 27 como potencias de 3.', EPN],
+      [2, 'Simplifica: √12 + √27 − √48', ['√3', '3√3', '0', '5√3'], '2√3 + 3√3 − 4√3 = √3.', 'Simplifica cada raíz sacando un cuadrado perfecto.', EPN]
+    ],
+    m3: [
+      [3, 'Si a² + b² = 34 y ab = 15, ¿cuánto vale (a − b)²?', ['4', '64', '19', '49'], '(a − b)² = a² + b² − 2ab = 34 − 30 = 4.', 'Desarrolla (a − b)² y reemplaza lo que conoces.', EPN],
+      [3, 'Factoriza: 6x² − x − 2', ['(2x + 1)(3x − 2)', '(2x − 1)(3x + 2)', '(6x + 1)(x − 2)', '(3x + 1)(2x − 2)'], '(2x + 1)(3x − 2) = 6x² − 4x + 3x − 2 = 6x² − x − 2.', 'Comprueba multiplicando cada opción.', EPN],
+      [3, 'Simplifica (x ≠ ±3): [(x² − 9)/(x² + 6x + 9)] · [(x + 3)/(x − 3)]', ['1', '(x − 3)/(x + 3)', 'x + 3', '−1'], '(x − 3)(x + 3)/(x + 3)² · (x + 3)/(x − 3) = 1.', 'Factoriza numerador y denominador.', EPN]
+    ],
+    m4: [
+      [2, 'El doble de la suma de un número y su sucesor es 22. ¿Cuál es el número?', ['5', '10', '11', '4'], '2(n + n + 1) = 22 → 2n + 1 = 11 → n = 5.', 'El sucesor de n es n + 1.', EPN],
+      [3, 'Un padre tiene el triple de la edad de su hijo. Dentro de 10 años tendrá el doble. ¿Cuántos años tiene el hijo?', ['10', '20', '5', '30'], '3h + 10 = 2(h + 10) → h = 10.', 'Plantea las edades dentro de 10 años.', EPN],
+      [3, 'Resuelve el sistema: x/2 + y/3 = 4; x − y = 3', ['(6, 3)', '(3, 6)', '(5, 2)', '(4, 1)'], 'Multiplica la primera por 6: 3x + 2y = 24. Con x = y + 3: 5y + 9 = 24 → y = 3, x = 6.', 'Quita los denominadores primero.', EPN]
+    ],
+    m5: [
+      [3, '¿Para qué valor positivo de k la ecuación x² + kx + 9 = 0 tiene una solución doble?', ['6', '3', '9', '36'], 'Solución doble: Δ = k² − 36 = 0 → k = 6.', 'Solución doble significa discriminante cero.', EPN],
+      [3, 'Resuelve: (x − 1)(x + 2) = 4', ['x = −3 o x = 2', 'x = 1 o x = −2', 'x = 3 o x = −2', 'x = 5 o x = 2'], 'x² + x − 2 = 4 → x² + x − 6 = 0 → (x + 3)(x − 2) = 0.', 'No iguales cada factor a 4: primero pasa todo a un lado.', EPN],
+      [3, 'Una raíz de x² − 7x + c = 0 es 2. ¿Cuál es la otra raíz?', ['5', '10', '−5', '9'], 'La suma de raíces es 7, así que la otra es 5 (y c = 10).', 'Usa la suma de raíces −b/a.', EPN]
+    ],
+    m6: [
+      [3, 'Resuelve: (x − 3)/(x + 1) ≤ 0', ['−1 < x ≤ 3', '−1 ≤ x ≤ 3', 'x ≤ −1 o x ≥ 3', 'x ≤ 3'], 'El cociente es negativo o cero entre −1 y 3. x = −1 se excluye (denominador cero) y x = 3 se incluye.', 'Analiza el signo de numerador y denominador.', EPN],
+      [2, '¿Cuántos números enteros cumplen |x − 4| ≤ 2?', ['5', '4', '3', '6'], '2 ≤ x ≤ 6: son 2, 3, 4, 5 y 6.', 'Escribe el intervalo y cuenta.', EPN],
+      [3, 'Resuelve: |3 − 2x| < 5', ['−1 < x < 4', 'x < −1 o x > 4', '−4 < x < 1', '−1 < x < 1'], '−5 < 3 − 2x < 5 → −8 < −2x < 2 → −1 < x < 4 (al dividir entre −2 se invierte).', 'Cuidado al dividir entre un número negativo.', EPN]
+    ],
+    m7: [
+      [2, 'En un triángulo ABC, el ángulo exterior en C mide 130° y A = 50°. ¿Cuánto mide B?', ['80°', '50°', '130°', '100°'], 'Un ángulo exterior es igual a la suma de los dos interiores no adyacentes: 130 = 50 + B.', 'Ángulo exterior = suma de los interiores no adyacentes.', EPN],
+      [2, 'Un poste de 6 m da una sombra de 4 m. A la misma hora, un edificio da una sombra de 18 m. ¿Cuánto mide el edificio?', ['27 m', '12 m', '24 m', '16 m'], 'Triángulos semejantes: 6/4 = h/18 → h = 27 m.', 'Los rayos del sol forman triángulos semejantes.', EPN],
+      [2, '¿Cuánto suman los ángulos interiores de un hexágono?', ['720°', '540°', '1080°', '360°'], '(n − 2)·180 = 4·180 = 720°.', 'Fórmula (n − 2)·180°.', EPN],
+      [3, 'Un triángulo isósceles tiene lados iguales de 10 cm y base de 12 cm. ¿Cuál es su área?', ['48 cm²', '60 cm²', '96 cm²', '120 cm²'], 'La altura divide la base en 6 y 6: h = √(100 − 36) = 8. Área = 12·8/2 = 48.', 'Traza la altura sobre la base y usa Pitágoras.', EPN]
+    ],
+    m8: [
+      [2, 'Simplifica: (1 − cos²θ)/sen θ', ['sen θ', 'cos θ', 'tan θ', '1'], '1 − cos²θ = sen²θ; sen²θ/sen θ = sen θ.', 'Usa sen² + cos² = 1.', EPN],
+      [3, 'Desde un punto a 20 m de la base de un árbol, el ángulo de elevación a la copa es 60°. ¿Cuánto mide el árbol?', ['20√3 m', '20√3/3 m', '10 m', '40 m'], 'tan 60° = h/20 → h = 20√3 ≈ 34,6 m.', 'Usa tangente: opuesto/adyacente.', EPN],
+      [3, 'Si tan θ = 3/4 y θ es agudo, ¿cuánto vale sen θ + cos θ?', ['7/5', '1', '7/4', '5/7'], 'Triángulo 3-4-5: sen = 3/5 y cos = 4/5. Suma 7/5.', 'Dibuja un triángulo con catetos 3 y 4.', EPN]
+    ],
+    m9: [
+      [3, 'Ecuación de la recta que pasa por (2, −1) y es perpendicular a 2x − y + 3 = 0:', ['x + 2y = 0', '2x − y − 5 = 0', 'x − 2y − 4 = 0', 'x + 2y − 4 = 0'], 'La recta dada tiene m = 2; la perpendicular, m = −1/2. y + 1 = −½(x − 2) → x + 2y = 0.', 'Primero encuentra la pendiente de la recta dada.', EPN],
+      [3, 'Ecuación de la circunferencia con centro (−1, 2) que pasa por (2, 6):', ['(x + 1)² + (y − 2)² = 25', '(x − 1)² + (y + 2)² = 25', '(x + 1)² + (y − 2)² = 5', '(x + 1)² + (y − 2)² = 49'], 'r = √(3² + 4²) = 5, así que r² = 25.', 'El radio es la distancia del centro al punto.', EPN],
+      [3, '¿Cuál es la distancia del punto (3, 4) a la recta 3x + 4y − 5 = 0?', ['4', '5', '20', '2'], 'd = |3·3 + 4·4 − 5| / √(9 + 16) = 20/5 = 4.', 'd = |Ax₀ + By₀ + C| / √(A² + B²).', EPN]
+    ],
+    m10: [
+      [1, 'De 80 focos, 12 salieron defectuosos. ¿Qué porcentaje funciona bien?', ['85%', '15%', '88%', '68%'], 'Funcionan 68 de 80: 68/80 = 0,85.', 'Primero cuenta los que funcionan.', EPN],
+      [2, 'Un vendedor gana 8% de comisión. ¿Cuánto debe vender para ganar $120?', ['$1500', '$960', '$1200', '$9,60'], '0,08·V = 120 → V = 1500.', 'Plantea 8% de V = 120.', EPN],
+      [3, 'Si 5 máquinas producen 300 piezas en 4 horas, ¿cuántas piezas producen 3 máquinas en 6 horas?', ['270', '180', '450', '300'], 'Cada máquina hace 300/(5·4) = 15 piezas por hora. 3·6·15 = 270.', 'Calcula cuántas piezas hace una máquina en una hora.', EPN]
+    ]
+  };
+  const s = window.RUMBO_SUBJECTS.find(x => x.id === 'mat');
+  Object.keys(add).forEach(id => s.topics.find(t => t.id === id).preguntas.push(...add[id]));
+})();

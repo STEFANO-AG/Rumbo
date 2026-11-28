@@ -32,7 +32,10 @@
       t.subj = s.id; TOPIC[t.id] = t; t.qids = [];
       t.preguntas.forEach((p, i) => {
         const id = t.id + '-' + (i + 1);
-        Q[id] = { id, subj: s.id, topic: t.id, d: p[0], q: p[1], o: p[2], s: p[3], h: p[4] };
+        const meta = p[5] || {};
+        // c = índice de la opción correcta. Por convención es la primera (0), salvo en
+        // preguntas de orden fijo (comparación cuantitativa), donde lo indica meta.ans.
+        Q[id] = { id, subj: s.id, topic: t.id, d: p[0], q: p[1], o: p[2], s: p[3], h: p[4], c: meta.fixed ? meta.ans : 0, fixed: !!meta.fixed, src: meta.src || '' };
         t.qids.push(id);
       });
     });
@@ -69,7 +72,9 @@
   const startOfDay = t => { const d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime(); };
   const fmtDate = t => new Date(t).toLocaleDateString('es-EC', { day: 'numeric', month: 'short' });
   const fmtDateTime = t => new Date(t).toLocaleString('es-EC', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-  const LETTERS = 'ABCD';
+  const LETTERS = 'ABCDE';
+  // Orden de las opciones en pantalla: barajado, salvo en preguntas de orden fijo.
+  const orderFor = q => q.fixed ? q.o.map((_, i) => i) : shuffle(q.o.map((_, i) => i));
   function relDay(t) {
     const d = Math.round((startOfDay(t) - startOfDay(Date.now())) / DAY);
     if (d <= 0) return 'hoy'; if (d === 1) return 'mañana'; return 'en ' + d + ' días';
@@ -165,7 +170,8 @@
       let score = s.weight * (1 - m.level / 5);
       if (todayBySubj[s.id] >= 10) score *= 0.5;
       const why = [];
-      if (s.id === 'mat') why.push('Matemática vale 40% en la EPN, es habilitante y es la base de la PAA');
+      if (s.why) why.push(s.why);
+      else if (s.id === 'mat') why.push('Matemática vale 40% en la EPN, es habilitante y es la base de la PAA');
       else why.push(s.name + ' vale 20% en la EPN');
       why.push(m.total ? 'vas en nivel ' + m.level + ' de 5 en este tema' : 'es el siguiente tema que no has empezado');
       const wp = weakPrereqs(t.id);
@@ -314,7 +320,7 @@
     // state: {sel, checked, help, showHint}
     const opts = order.map((oi, i) => {
       let cls = '';
-      if (state.checked) { if (oi === 0) cls = 'ok'; else if (state.sel === oi) cls = 'bad'; }
+      if (state.checked) { if (oi === q.c) cls = 'ok'; else if (state.sel === oi) cls = 'bad'; }
       else if (state.sel === oi) cls = 'sel';
       return `<button class="opt ${cls}" data-o="${oi}" ${state.checked ? 'disabled' : ''}><span class="l">${LETTERS[i]}</span><span>${esc(q.o[oi])}</span></button>`;
     }).join('');
@@ -326,19 +332,19 @@
     if (cleanup) { cleanup(); cleanup = null; }
     let i = 0, results = [], finished = false;
     let st, order, t0;
-    function setup() { st = { sel: null, checked: false, help: false, showHint: false, cat: '' }; order = shuffle([0, 1, 2, 3]); t0 = Date.now(); }
+    function setup() { st = { sel: null, checked: false, help: false, showHint: false, cat: '' }; order = orderFor(Q[qids[i]]); t0 = Date.now(); }
     setup();
     function draw() {
       const q = Q[qids[i]], s = SUBJ[q.subj];
       let fb = '';
       if (st.checked) {
-        const ok = st.sel === 0;
+        const ok = st.sel === q.c;
         fb = `<div class="feedback ${ok ? 'ok' : 'bad'}"><b>${ok ? '¡Correcto!' : st.sel === -1 ? 'Está bien no saber: así aprendes.' : 'No es correcta.'}</b> ${esc(q.s)}
           ${!ok ? `<div style="margin-top:10px" class="small"><b>¿Qué pasó?</b> (opcional, ayuda a tu registro de errores)</div><div class="chips">${['desconocimiento', 'conceptual', 'calculo', 'lectura', 'azar'].map(c => `<button class="chip ${st.cat === c ? 'on' : ''}" data-cat="${c}">${ERROR_CATS[c]}</button>`).join('')}</div>` : ''}</div>`;
       }
       setView(`<p class="small"><a href="${opts.back}">← Salir</a></p>
         <div class="row"><span class="tag ${s.color}">${s.name}</span><span class="muted small">${esc(opts.title)} · ${i + 1} de ${qids.length}</span>
-        ${opts.mode === 'review' ? '<span class="tag">Problema equivalente a uno que fallaste</span>' : ''}<span class="spacer"></span>${dots(Q[qids[i]].d)}</div>
+        ${opts.mode === 'review' ? '<span class="tag">Problema equivalente a uno que fallaste</span>' : ''}${q.src ? `<span class="tag">${esc(q.src)}</span>` : ''}<span class="spacer"></span>${dots(Q[qids[i]].d)}</div>
         <div class="bar" style="margin:12px 0 20px"><i style="width:${(i / qids.length) * 100}%"></i></div>
         <div class="card">${questionCard(q, order, st)}
           ${st.showHint && !st.checked ? `<div class="notice info"><b>Pista:</b> ${esc(q.h)}</div>` : ''}
@@ -365,7 +371,7 @@
     }
     function check(sel) {
       st.checked = true;
-      const ok = sel === 0;
+      const ok = sel === Q[qids[i]].c;
       results.push({ qid: qids[i], ok, help: st.help });
       record(qids[i], ok, { mode: opts.mode, help: st.help, ms: Date.now() - t0, cat: st.cat, origin: opts.origins ? opts.origins[i] : null });
       draw();
@@ -379,7 +385,7 @@
     function key(e) {
       if (finished || e.target.tagName === 'INPUT') return;
       const k = e.key.toUpperCase();
-      if (!st.checked && LETTERS.includes(k)) { st.sel = order[LETTERS.indexOf(k)]; draw(); }
+      if (!st.checked && LETTERS.slice(0, order.length).includes(k)) { st.sel = order[LETTERS.indexOf(k)]; draw(); }
       else if (e.key === 'Enter') { if (e.target.tagName === 'BUTTON') return; if (!st.checked && st.sel != null) check(st.sel); else if (st.checked) next(); }
     }
     document.addEventListener('keydown', key);
@@ -451,7 +457,7 @@
         const q = Q[e.qid], s = SUBJ[e.subj];
         return `<div class="topic" style="cursor:default"><div class="t"><span class="tag ${s.color}">${s.name}</span> <span class="small muted">${esc(TOPIC[e.topic].title)}</span>
           <div style="margin-top:4px">${esc(q.q)}</div>
-          <div class="small muted">Respuesta correcta: <b>${esc(q.o[0])}</b> · ${e.cat ? ERROR_CATS[e.cat] : 'sin clasificar'} · fallada ${e.count} ${e.count > 1 ? 'veces' : 'vez'} · ${e.status}${e.due ? ' · repaso ' + relDay(e.due) : ''}</div></div>
+          <div class="small muted">Respuesta correcta: <b>${esc(q.o[q.c])}</b> · ${e.cat ? ERROR_CATS[e.cat] : 'sin clasificar'} · fallada ${e.count} ${e.count > 1 ? 'veces' : 'vez'} · ${e.status}${e.due ? ' · repaso ' + relDay(e.due) : ''}</div></div>
           <button class="btn small" data-r="${e.qid}">Practicar</button></div>`;
       }).join('')}</div>` : `<div class="card empty">${all.length ? 'No hay errores en este filtro.' : 'Todavía no hay errores registrados. Aparecerán cuando practiques.'}</div>`}`);
     app().querySelectorAll('[data-r]').forEach(b => b.onclick = () => go('#/repaso/' + b.dataset.r));
@@ -472,7 +478,7 @@
   }
   function makeSection(sid, count, minutes, weight, qids) {
     qids = qids || pickQuestions(sid, count);
-    const order = {}; qids.forEach(id => order[id] = shuffle([0, 1, 2, 3]));
+    const order = {}; qids.forEach(id => order[id] = orderFor(Q[id]));
     return { subj: sid, qids, order, answers: {}, marked: {}, minutes, weight, requested: count, startedAt: null, endsAt: null, submitted: false };
   }
   function startExam(ex) {
@@ -489,6 +495,10 @@
   function startMini(sid) {
     startExam({ kind: 'mini', subj: sid, name: 'Mini simulacro de ' + SUBJ[sid].name, sections: [makeSection(sid, 10, 25, null)] });
   }
+  // Parte de Razonamiento Matemático de la PAA según la guía publicada por la USFQ.
+  function startPAA() {
+    startExam({ kind: 'paa', subj: 'paa', name: 'Simulacro PAA · Razonamiento Matemático', sections: [makeSection('paa', 25, 30, null)] });
+  }
   function startEPN() {
     const bp = S.settings.epn;
     startExam({ kind: 'epn', name: bp.name, cycle: bp.cycle, habilitanteMin: bp.habilitanteMin, sections: bp.sections.filter(x => SUBJ[x.subj] && x.count > 0).map(x => makeSection(x.subj, x.count, x.minutes, x.weight)) });
@@ -504,13 +514,15 @@
           <p class="small muted">Los tiempos vienen de los lineamientos 2026-B y puedes cambiarlos en Ajustes. Con el banco actual algunas secciones pueden tener menos preguntas que las pedidas.</p>
           <button class="btn primary" id="epn">Empezar simulacro EPN</button></div>
         <div class="card stripe"><span class="tag">USFQ · PAA</span><h3 style="margin-top:8px">Simulacro PAA</h3>
-          <p class="small muted">La PAA tiene Aptitud Verbal y Aptitud Matemática (1200 puntos cada una). El formato de práctica se agregará cuando cargues la guía oficial del Portal de Admisiones de la USFQ. Mientras tanto, la Matemática de Rumbo ya te prepara para la parte matemática.</p>
-          <button class="btn" disabled>Próximamente</button></div>
+          ${SUBJ.paa ? `<p class="small muted">Razonamiento Matemático con el formato de la guía de la USFQ: 25 preguntas en 30 minutos, cinco opciones por pregunta y ejercicios de comparación. La parte verbal se agregará después. Para el formato oficial, usa también el simulador del Portal de Admisiones.</p>
+          <button class="btn primary" id="paa">Empezar simulacro PAA matemático</button>`
+          : `<p class="small muted">Falta el archivo js/data-paa.js en index.html.</p><button class="btn" disabled>No disponible</button>`}</div>
         <div class="card"><h3>Mini simulacros por materia</h3><p class="small muted">10 preguntas en 25 minutos.</p><div class="row">${SUBJECTS.map(s => `<button class="btn small" data-mini="${s.id}">${s.name}</button>`).join('')}</div></div>
         <div class="card"><h3>Diagnósticos</h3><p class="small muted">Sin tiempo. Puedes repetirlos para medir tu avance.</p><div class="row">${SUBJECTS.map(s => `<button class="btn small" data-diag="${s.id}">${s.name}</button>`).join('')}</div></div>
       </div>
       <h2>Historial</h2>${hist.length ? `<div class="card"><table><tr><th>Fecha</th><th>Prueba</th><th>Resultado</th><th></th></tr>${hist.map(e => `<tr><td>${fmtDateTime(e.finished)}</td><td>${esc(e.name)}</td><td>${e.summary}</td><td><a href="#/resultado/${e.id}">Ver</a></td></tr>`).join('')}</table></div>` : '<div class="card empty">Aún no has hecho ningún simulacro ni diagnóstico.</div>'}`);
     $('#epn').onclick = startEPN;
+    if ($('#paa')) $('#paa').onclick = startPAA;
     app().querySelectorAll('[data-mini]').forEach(b => b.onclick = () => startMini(b.dataset.mini));
     app().querySelectorAll('[data-diag]').forEach(b => b.onclick = () => startDiagnostic(b.dataset.diag));
   };
@@ -531,7 +543,7 @@
       setView(`<h1>${esc(ex.name)}</h1><p class="sub">Sección ${ex.cur + 1} de ${ex.sections.length}</p>
         <div class="card"><span class="tag ${subj.color}">${subj.name}</span><h3 style="margin-top:8px">${s.qids.length} preguntas${s.minutes ? ' · ' + s.minutes + ' minutos' : ' · sin límite de tiempo'}</h3>
         ${s.qids.length < s.requested ? `<p class="small muted">El formato pide ${s.requested}; el banco actual tiene ${s.qids.length} disponibles para esta sección.</p>` : ''}
-        <ul class="small"><li>Cada pregunta tiene 4 opciones y una sola correcta. Una incorrecta no resta puntos.</li>
+        <ul class="small">${ex.kind === 'paa' ? '<li>La mayoría de preguntas tienen 5 opciones; las de comparación tienen 4 opciones fijas. Solo una es correcta.</li>' : '<li>Cada pregunta tiene 4 opciones y una sola correcta. Una incorrecta no resta puntos.</li>'}
         <li>Puedes marcar preguntas para revisarlas y moverte libremente dentro de la sección.</li>
         ${s.minutes ? '<li>Al acabarse el tiempo, la sección se entrega sola.</li>' : '<li>Si no sabes una, déjala en blanco: el diagnóstico la registra como "sin evidencia".</li>'}
         ${ex.kind === 'epn' && ex.cur === 0 ? '<li>Matemática es habilitante: en la EPN real, solo quien alcanza el mínimo de su carrera rinde las demás áreas.</li>' : ''}</ul>
@@ -570,7 +582,7 @@
     function submitSection() {
       const s = sec();
       s.submitted = true; s.submittedAt = Date.now();
-      s.raw = s.qids.filter(id => s.answers[id] === 0).length;
+      s.raw = s.qids.filter(id => s.answers[id] === Q[id].c).length;
       save();
       if (ex.kind === 'epn' && ex.cur === 0 && ex.habilitanteMin != null && s.raw < ex.habilitanteMin) return finish(true);
       if (ex.cur + 1 < ex.sections.length) { ex.cur++; ex.idx = 0; save(); intro(); }
@@ -584,7 +596,7 @@
         s.qids.forEach(id => {
           const a = s.answers[id];
           if (a == null && ex.kind === 'diag') return;
-          record(id, a === 0, { mode: ex.kind === 'diag' ? 'diag' : 'exam', help: false });
+          record(id, a === Q[id].c, { mode: ex.kind === 'diag' ? 'diag' : 'exam', help: false });
         });
       });
       const done = ex.sections.filter(s => s.submitted);
@@ -616,7 +628,7 @@
     const ex = S.exams.find(e => e.id === id); if (!ex) return go('#/simulacros');
     const done = ex.sections.filter(s => s.submitted);
     const topicStats = {};
-    done.forEach(s => s.qids.forEach(q => { const t = Q[q].topic; topicStats[t] = topicStats[t] || { ok: 0, n: 0, blank: 0 }; topicStats[t].n++; if (s.answers[q] === 0) topicStats[t].ok++; if (s.answers[q] == null) topicStats[t].blank++; }));
+    done.forEach(s => s.qids.forEach(q => { const t = Q[q].topic; topicStats[t] = topicStats[t] || { ok: 0, n: 0, blank: 0 }; topicStats[t].n++; if (s.answers[q] === Q[q].c) topicStats[t].ok++; if (s.answers[q] == null) topicStats[t].blank++; }));
     const weakest = Object.entries(topicStats).filter(([, v]) => v.ok / v.n < 0.6).sort((a, b) => a[1].ok / a[1].n - b[1].ok / b[1].n);
     let head = '';
     if (ex.kind === 'epn') {
@@ -633,9 +645,9 @@
       <h2>Por tema</h2><div class="card"><table><tr><th>Tema</th><th>Aciertos</th><th>En blanco</th><th></th></tr>${Object.entries(topicStats).map(([t, v]) => `<tr><td>${esc(TOPIC[t].title)}</td><td>${v.ok}/${v.n}</td><td>${v.blank}</td><td><a href="#/tema/${t}">Estudiar</a></td></tr>`).join('')}</table></div>
       ${weakest.length ? `<h2>Plan de recuperación</h2><div class="card"><ol>${weakest.slice(0, 4).map(([t]) => `<li><a href="#/tema/${t}">${esc(TOPIC[t].title)}</a>: repasa la lección y haz una ronda de práctica.</li>`).join('')}</ol><p class="small muted">Las preguntas falladas ya están en tu registro de errores para repasarlas desde mañana.</p></div>` : ''}
       <h2>Revisión de respuestas</h2><div class="card" style="padding:0">${done.map(s => s.qids.map((id, i) => {
-        const q = Q[id], a = s.answers[id], ok = a === 0;
+        const q = Q[id], a = s.answers[id], ok = a === q.c;
         return `<div class="topic" style="cursor:default;align-items:flex-start"><span class="tag ${ok ? '' : ''}" style="background:${ok ? 'var(--okbg)' : 'var(--badbg)'};color:${ok ? 'var(--ok)' : 'var(--bad)'}">${ok ? '✓' : a == null ? '—' : '✗'}</span>
-          <div class="t"><div>${esc(q.q)}</div><div class="small muted">${a != null && !ok ? 'Tu respuesta: ' + esc(q.o[a]) + ' · ' : ''}Correcta: <b>${esc(q.o[0])}</b></div><div class="small">${esc(q.s)}</div></div></div>`;
+          <div class="t"><div>${esc(q.q)}</div><div class="small muted">${a != null && !ok ? 'Tu respuesta: ' + esc(q.o[a]) + ' · ' : ''}Correcta: <b>${esc(q.o[q.c])}</b></div><div class="small">${esc(q.s)}</div></div></div>`;
       }).join('')).join('')}</div>`);
   };
 
@@ -650,10 +662,10 @@
         <div class="card"><div class="muted small">Últimos 7 días</div><div class="big">${week.length}</div><p class="small muted">${week.length ? pct(week.filter(a => a.ok).length / week.length) + ' de aciertos' : 'Sin práctica esta semana'}</p></div>
         <div class="card"><div class="muted small">Días que estudiaste</div><div class="big">${days}</div><p class="small muted">${Object.values(S.errors).filter(e => e.status === 'resuelto').length} errores resueltos</p></div>
       </div>
-      <h2>Ruta EPN</h2><div class="card">${SUBJECTS.map(s => { const m = subjectMastery(s.id); return `<div style="margin:10px 0"><div class="row"><b>${s.name}</b><span class="spacer"></span><span class="small muted">nivel ${m.avg.toFixed(1)}/5 · ${m.dominated}/${m.count} dominados</span></div><div class="bar ${s.color}"><i style="width:${m.avg / 5 * 100}%"></i></div></div>`; }).join('')}
+      <h2>Ruta EPN</h2><div class="card">${SUBJECTS.filter(s => s.tags.includes('EPN')).map(s => { const m = subjectMastery(s.id); return `<div style="margin:10px 0"><div class="row"><b>${s.name}</b><span class="spacer"></span><span class="small muted">nivel ${m.avg.toFixed(1)}/5 · ${m.dominated}/${m.count} dominados</span></div><div class="bar ${s.color}"><i style="width:${m.avg / 5 * 100}%"></i></div></div>`; }).join('')}
         <div style="margin:10px 0;opacity:.6"><div class="row"><b>Lenguaje</b><span class="spacer"></span><span class="small muted">próximamente</span></div><div class="bar"><i style="width:0"></i></div></div>
         ${epn.length ? `<p class="small">Último simulacro EPN: <b>${epn[epn.length - 1].estimate}</b> (estimación de práctica, ${fmtDate(epn[epn.length - 1].finished)}).${epn.length > 1 ? ' Anterior: ' + epn[epn.length - 2].estimate + '.' : ''}</p>` : '<p class="small muted">Haz un simulacro EPN para ver tu estimación de práctica.</p>'}</div>
-      <h2>Ruta USFQ (PAA)</h2><div class="card"><p class="small">La Aptitud Matemática de la PAA se apoya en los mismos temas de Matemática (nivel medio ${subjectMastery('mat').avg.toFixed(1)}/5). La Aptitud Verbal se agregará en la próxima fase. Rumbo no convierte tus porcentajes a la escala de 2400 porque no hay un modelo de equivalencia validado.</p></div>
+      <h2>Ruta USFQ (PAA)</h2><div class="card">${SUBJ.paa ? (() => { const m = subjectMastery('paa'); return `<div style="margin:10px 0"><div class="row"><b>PAA Matemático</b><span class="spacer"></span><span class="small muted">nivel ${m.avg.toFixed(1)}/5 · ${m.dominated}/${m.count} dominados</span></div><div class="bar paa"><i style="width:${m.avg / 5 * 100}%"></i></div></div>`; })() : ''}<p class="small">La Aptitud Matemática de la PAA se apoya en los mismos temas de Matemática (nivel medio ${subjectMastery('mat').avg.toFixed(1)}/5). La Aptitud Verbal y la Redacción se agregarán en la próxima fase. Rumbo no convierte tus porcentajes a la escala de 2400 porque no hay un modelo de equivalencia validado.</p></div>
       <h2>Detalle por tema</h2><div class="card"><table><tr><th>Tema</th><th>Estado</th><th>Nivel</th><th>Aciertos (sin ayuda)</th></tr>${SUBJECTS.map(s => s.topics.map(t => { const m = mastery(t.id); return `<tr><td><span class="tag ${s.color}">${s.short}</span> <a href="#/tema/${t.id}">${esc(t.title)}</a></td><td>${m.status}${m.provisional ? ' (provisional)' : ''}</td><td>${dots(m.level)}</td><td>${m.n ? pct(m.acc) + ' en ' + m.n : '—'}</td></tr>`; }).join('')).join('')}</table>
       <p class="small muted">Cómo se calcula: se miran tus últimos 10 intentos sin pista. Nivel 2 = 50%+ en 3 intentos; 3 = 70%+ en 4; 4 (dominado) = 85%+ en 5; 5 = 95%+ en 8 incluyendo difíciles. "Provisional" significa que más del 40% de tus intentos recientes fueron con ayuda.</p></div>`);
   };
@@ -665,6 +677,7 @@
           <li>Puntaje de admisión: 60% promedio de 1.º y 2.º de bachillerato (o nota de grado) + 40% PAA de College Board.</li>
           <li>PAA: Aptitud Verbal (máx. 1200) + Aptitud Matemática (máx. 1200) = 2400. Incluye un examen de ubicación de inglés que no afecta la admisión.</li>
           <li>Mínimo publicado para ingresar: 1650. Para solicitar asistencia financiera se publica un mínimo de 1900.</li>
+          <li>Según la <a href="https://www.usfq.edu.ec/sites/default/files/inline-files/Guia_de_Estudio_de_la_Pueba_de_Aptitud.pdf" target="_blank" rel="noopener">Guía de Estudio de la PAA publicada por la USFQ</a>: Razonamiento Verbal (2 partes de 30 preguntas, 35 min cada una), Razonamiento Matemático (2 partes de 25 preguntas, 30 y 35 min) y Redacción Indirecta (30 preguntas, 30 min). Preguntas de 5 opciones, comparaciones y algunas de respuesta abierta. Esa guía usa la escala 200–800 por sección, mientras la página de admisiones habla de 1200 por componente: confirma la versión vigente en el Portal.</li>
           <li>El Portal de Admisiones ofrece guía de estudios, prueba de práctica y simulador oficiales. Úsalos, son la mejor referencia del formato.</li></ul>
           <a href="https://www.usfq.edu.ec/es/admisiones/admisiones-pregrado/admisiones-pregrado-estudiantes-nacionales" target="_blank" rel="noopener">Página oficial de admisiones USFQ</a></div>
         <div class="card"><span class="tag">EPN</span><h3 style="margin-top:8px">Escuela Politécnica Nacional</h3><ul class="small">

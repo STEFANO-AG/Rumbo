@@ -121,3 +121,49 @@ window.RUMBO_SUBJECTS.push({
     }
   ]
 });
+
+// ---------------------------------------------------------------------------
+// NIVEL EXAMEN (agregado el 27-11-2026)
+// Escritas siguiendo el temario oficial EPN 2026 y el tipo de preguntas de la guía
+// oficial EPN 2025-B (unidades del SI, tabla periódica, estados de la materia, mezclas).
+// ---------------------------------------------------------------------------
+(function () {
+  const EPN = { src: 'Estilo guía oficial EPN' };
+  const add = {
+    q1: [
+      [1, '¿Cuál es una magnitud fundamental del Sistema Internacional?', ['Intensidad luminosa', 'Velocidad', 'Fuerza', 'Volumen'], 'Las 7 fundamentales son longitud, masa, tiempo, corriente eléctrica, temperatura, cantidad de sustancia e intensidad luminosa.', 'Las otras se obtienen combinando fundamentales.', EPN],
+      [2, 'Convierte 0,05 toneladas a kilogramos', ['50 kg', '500 kg', '5 kg', '0,5 kg'], '1 t = 1000 kg; 0,05·1000 = 50 kg.', '1 tonelada = 1000 kg.', EPN],
+      [3, 'Convierte una densidad de 3,2 g/cm³ a kg/m³', ['3200 kg/m³', '0,0032 kg/m³', '320 kg/m³', '32 000 kg/m³'], '3,2 g/cm³ · (1 kg/1000 g) · (10⁶ cm³/1 m³) = 3200 kg/m³.', '1 m³ = 1 000 000 cm³.', EPN],
+      [1, 'Una mezcla heterogénea se caracteriza por:', ['Formar más de una fase', 'Tener composición fija', 'Ser un compuesto', 'Tener una sola fase'], 'En una mezcla heterogénea se distinguen sus partes (fases).', 'Piensa en agua con aceite.', EPN]
+    ],
+    q2: [
+      [2, '¿Cuántos electrones desapareados tiene el nitrógeno (Z = 7)?', ['3', '1', '5', '0'], '1s² 2s² 2p³: los 3 electrones p ocupan orbitales distintos (regla de Hund).', 'Usa la regla de Hund en los orbitales 2p.', EPN],
+      [3, 'El ion X²⁻ tiene 18 electrones y 16 neutrones. ¿Cuál es su número másico?', ['32', '34', '36', '18'], 'Ganó 2 electrones: Z = 16. A = 16 + 16 = 32.', 'Primero encuentra Z.', EPN],
+      [3, '¿Cuál es la configuración del ion Fe²⁺ (Z = 26)?', ['[Ar] 3d⁶', '[Ar] 4s² 3d⁴', '[Ar] 4s² 3d⁶', '[Ar] 3d⁸'], 'Fe: [Ar] 4s² 3d⁶. Los metales de transición pierden primero los electrones 4s.', 'Se pierden primero los electrones del nivel más externo (4s).', EPN]
+    ],
+    q3: [
+      [2, 'Ordena de menor a mayor radio atómico: Na, Mg, K', ['Mg < Na < K', 'K < Na < Mg', 'Na < Mg < K', 'Mg < K < Na'], 'En el período 3, Mg es menor que Na; K, un período abajo, es el mayor.', 'El radio baja hacia la derecha y sube hacia abajo.', EPN],
+      [3, 'Un elemento tiene la configuración [Ar] 4s² 3d⁵. ¿Cuál es?', ['Manganeso', 'Hierro', 'Cromo', 'Vanadio'], '18 + 2 + 5 = 25 electrones: Z = 25, manganeso.', 'Suma los electrones para obtener Z.', EPN]
+    ],
+    q4: [
+      [2, '¿Cuál es la fórmula del sulfato de aluminio?', ['Al₂(SO₄)₃', 'Al(SO₄)₃', 'Al₃(SO₄)₂', 'Al₂(SO₃)₃'], 'Al³⁺ y SO₄²⁻: se cruzan las cargas → Al₂(SO₄)₃.', 'Cruza las cargas de los iones.', EPN],
+      [2, '¿Cómo se llama HClO?', ['Ácido hipocloroso', 'Ácido clórico', 'Ácido clorhídrico', 'Ácido perclórico'], 'El cloro actúa con +1, la menor valencia: hipo- -oso.', 'Calcula el número de oxidación del cloro.', EPN],
+      [3, '¿Cuál es el número de oxidación del Mn en KMnO₄?', ['+7', '+6', '+4', '+2'], '+1 + x + 4(−2) = 0 → x = +7.', 'La suma debe dar cero.', EPN],
+      [2, '¿Cómo se llama NaHCO₃?', ['Hidrogenocarbonato de sodio (bicarbonato de sodio)', 'Carbonato de sodio', 'Hidróxido de sodio y carbono', 'Carburo de sodio'], 'Es una sal ácida (cuaternaria) del ácido carbónico.', 'Tiene un H que queda del ácido.', EPN]
+    ],
+    q5: [
+      [2, '¿Qué par de elementos forma el enlace más iónico?', ['K y F', 'C y O', 'N y H', 'Cl y Cl'], 'La mayor diferencia de electronegatividad está entre K (muy baja) y F (la más alta).', 'Busca la mayor diferencia de electronegatividad.', EPN],
+      [3, '¿Cuál molécula es apolar aunque sus enlaces son polares?', ['CO₂', 'H₂O', 'NH₃', 'HCl'], 'El CO₂ es lineal y sus dos dipolos se anulan.', 'Mira la geometría de la molécula.', EPN],
+      [2, '¿Cuál sustancia tiene el punto de ebullición más alto?', ['H₂O', 'H₂S', 'CH₄', 'O₂'], 'El agua forma puentes de hidrógeno.', '¿Cuál forma puentes de hidrógeno?', EPN],
+      [2, '¿Qué geometría tiene el BF₃?', ['Trigonal plana', 'Piramidal', 'Tetraédrica', 'Angular'], 'El boro tiene 3 pares enlazantes y ningún par libre.', 'Cuenta pares enlazantes y libres del boro.', EPN]
+    ],
+    q6: [
+      [3, 'Un compuesto tiene 40% de C, 6,7% de H y 53,3% de O. ¿Cuál es su fórmula empírica?', ['CH₂O', 'CHO', 'C₂H₄O', 'CH₄O'], 'En 100 g: C 40/12 = 3,33; H 6,7/1 = 6,7; O 53,3/16 = 3,33. Dividiendo entre 3,33: 1 : 2 : 1.', 'Pasa los porcentajes a moles y divide entre el menor.', EPN],
+      [2, '¿Cuántos gramos de CO₂ se forman al quemar 16 g de CH₄? (CH₄ + 2O₂ → CO₂ + 2H₂O)', ['44 g', '16 g', '22 g', '88 g'], '16 g de CH₄ = 1 mol, que da 1 mol de CO₂ = 44 g.', 'Pasa a moles y usa la proporción 1:1.', EPN],
+      [3, 'N₂ + 3H₂ → 2NH₃. Con 28 g de N₂ y 9 g de H₂, ¿cuántos gramos de NH₃ se forman?', ['34 g', '51 g', '37 g', '17 g'], '1 mol de N₂ necesita 3 mol de H₂ (hay 4,5): el limitante es N₂. Se forman 2 mol de NH₃ = 34 g.', 'Encuentra el reactivo limitante.', EPN],
+      [3, '¿Cuántos átomos de oxígeno hay en 0,5 mol de H₂SO₄?', ['1,204 × 10²⁴', '3,011 × 10²³', '6,022 × 10²³', '2,408 × 10²⁴'], '0,5 mol · 4 = 2 mol de O = 2·6,022 × 10²³.', 'Cada molécula tiene 4 átomos de oxígeno.', EPN]
+    ]
+  };
+  const s = window.RUMBO_SUBJECTS.find(x => x.id === 'qui');
+  Object.keys(add).forEach(id => s.topics.find(t => t.id === id).preguntas.push(...add[id]));
+})();

@@ -117,3 +117,46 @@ window.RUMBO_SUBJECTS.push({
     }
   ]
 });
+
+// ---------------------------------------------------------------------------
+// NIVEL EXAMEN (agregado el 27-11-2026)
+// Escritas siguiendo el temario oficial EPN 2026 (incluye resistencia del aire,
+// satélites y movimiento circular) y la bibliografía que recomienda la EPN
+// (Hewitt, "Física conceptual"; Serway, "Fundamentos de física").
+// ---------------------------------------------------------------------------
+(function () {
+  const EPN = { src: 'Temario oficial EPN 2026' };
+  const add = {
+    f1: [
+      [3, 'Un cuerpo está en equilibrio bajo tres fuerzas: 30 N al este, 40 N al norte y una tercera fuerza F. ¿Cuál es la magnitud de F?', ['50 N', '70 N', '10 N', '35 N'], 'F debe anular la resultante de las otras dos: √(30² + 40²) = 50 N.', 'En equilibrio la fuerza neta es cero.', EPN],
+      [3, 'Un semáforo de 100 N cuelga de dos cables simétricos que forman 30° con la horizontal. ¿Cuál es la tensión en cada cable?', ['100 N', '50 N', '57,7 N', '200 N'], 'Las componentes verticales equilibran el peso: 2T·sen 30° = 100 → T = 100 N.', 'Solo las componentes verticales sostienen el peso.', EPN]
+    ],
+    f2: [
+      [2, 'Una pelota se lanza hacia arriba y vuelve a la mano 4 s después (g = 10 m/s²). ¿Con qué velocidad se lanzó?', ['20 m/s', '40 m/s', '10 m/s', '80 m/s'], 'Sube durante 2 s: v₀ = g·t = 10·2 = 20 m/s.', 'El tiempo de subida es la mitad del total.', EPN],
+      [3, 'Un auto a 72 km/h frena con aceleración de −4 m/s². ¿Qué distancia recorre hasta detenerse?', ['50 m', '100 m', '25 m', '5 m'], '72 km/h = 20 m/s. 0 = 400 − 2·4·d → d = 50 m.', 'Convierte a m/s y usa v² = v₀² + 2ad.', EPN],
+      [2, 'Un paracaidista alcanza su velocidad terminal cuando:', ['La resistencia del aire iguala a su peso', 'Su aceleración es igual a g', 'Su peso se vuelve cero', 'La resistencia del aire supera a su peso'], 'Con fuerza neta cero ya no acelera y cae con velocidad constante.', '¿Qué pasa con la fuerza neta?', EPN]
+    ],
+    f3: [
+      [2, 'Un satélite se mantiene en órbita circular alrededor de la Tierra porque:', ['Cae continuamente hacia la Tierra mientras avanza de lado', 'En el espacio no hay gravedad', 'Su motor lo empuja siempre hacia afuera', 'La gravedad de la Luna lo sostiene'], 'La gravedad le da la fuerza centrípeta; su velocidad tangencial hace que "caiga alrededor" de la Tierra.', 'Piensa en un proyectil lanzado muy rápido.', EPN],
+      [3, 'Se lanza un proyectil a 20 m/s con un ángulo de 30° (g = 10 m/s²). ¿Cuál es su altura máxima?', ['5 m', '10 m', '20 m', '2,5 m'], 'vy = 20·sen 30° = 10 m/s. h = vy²/(2g) = 100/20 = 5 m.', 'Solo la componente vertical determina la altura.', EPN],
+      [3, 'Para el mismo proyectil (20 m/s, 30°, g = 10), ¿cuál es su alcance horizontal aproximado?', ['34,6 m', '40 m', '20 m', '17,3 m'], 'Tiempo de vuelo 2 s; vx = 20·cos 30° ≈ 17,3 m/s; alcance ≈ 34,6 m.', 'Calcula el tiempo de vuelo con la componente vertical.', EPN]
+    ],
+    f4: [
+      [2, 'Un auto de 1000 kg toma una curva de 50 m de radio a 10 m/s. ¿Qué fuerza centrípeta necesita?', ['2000 N', '200 N', '20 000 N', '500 N'], 'F = m·v²/r = 1000·100/50 = 2000 N.', 'F = m·v²/r.', EPN],
+      [3, 'Dos bloques de 2 kg y 3 kg, unidos por una cuerda sobre una mesa sin fricción, se jalan con 20 N desde el bloque de 3 kg. ¿Cuál es la tensión en la cuerda?', ['8 N', '12 N', '20 N', '4 N'], 'a = 20/5 = 4 m/s². La cuerda solo acelera al bloque de 2 kg: T = 2·4 = 8 N.', 'Primero la aceleración del sistema, luego aísla un bloque.', EPN],
+      [2, 'Si la masa de la Tierra se duplicara sin cambiar su radio, tu peso:', ['Se duplicaría', 'Se reduciría a la mitad', 'Se cuadruplicaría', 'No cambiaría'], 'F = G·M·m/R²: es proporcional a M.', 'Mira la ley de gravitación.', EPN]
+    ],
+    f5: [
+      [3, 'Un bloque de 2 kg se suelta desde 5 m de altura por una rampa y llega abajo a 8 m/s (g = 10). ¿Cuánta energía se perdió por fricción?', ['36 J', '64 J', '100 J', '164 J'], 'Energía inicial mgh = 100 J. Energía final ½·2·64 = 64 J. Perdida: 36 J.', 'Compara la energía al inicio y al final.', EPN],
+      [3, 'Un motor de 500 W sube una carga de 50 kg a velocidad constante (g = 10). ¿Con qué rapidez la sube?', ['1 m/s', '10 m/s', '0,1 m/s', '25 m/s'], 'P = F·v y F = mg = 500 N. v = 500/500 = 1 m/s.', 'Potencia = fuerza × velocidad.', EPN],
+      [2, 'Si la rapidez de un auto se duplica, su energía cinética:', ['Se cuadruplica', 'Se duplica', 'No cambia', 'Se reduce a la mitad'], 'Ec ∝ v²: 2² = 4.', 'La velocidad está al cuadrado.', EPN]
+    ],
+    f6: [
+      [3, 'Una pelota de 0,5 kg golpea una pared a 10 m/s y rebota a 10 m/s en sentido contrario. ¿Cuál es la magnitud del impulso?', ['10 N·s', '0 N·s', '5 N·s', '20 N·s'], 'Δp = 0,5·10 − (0,5·(−10)) = 10 N·s.', 'Las velocidades tienen sentidos opuestos.', EPN],
+      [3, 'Si el choque anterior dura 0,05 s, ¿qué fuerza media ejerce la pared?', ['200 N', '100 N', '0,5 N', '500 N'], 'F = I/Δt = 10/0,05 = 200 N.', 'F = impulso / tiempo.', EPN],
+      [2, 'Dos patinadores de 60 kg y 40 kg, en reposo, se empujan. El de 60 kg sale a 2 m/s. ¿A qué rapidez sale el otro?', ['3 m/s', '2 m/s', '1,33 m/s', '5 m/s'], '60·2 = 40·v → v = 3 m/s.', 'El momento total sigue siendo cero.', EPN]
+    ]
+  };
+  const s = window.RUMBO_SUBJECTS.find(x => x.id === 'fis');
+  Object.keys(add).forEach(id => s.topics.find(t => t.id === id).preguntas.push(...add[id]));
+})();

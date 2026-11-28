@@ -2,7 +2,7 @@
   --bg:#f6f4ef; --surface:#ffffff; --surface2:#efece5; --line:#e2ddd2;
   --text:#1d2430; --muted:#5d6675; --brand:#13324a; --brand2:#1f5b7a; --accent:#2a7f9e;
   --ok:#1f7a4d; --okbg:#e5f4ec; --bad:#b23a3a; --badbg:#fbeaea; --warn:#8a5a00; --warnbg:#fdf3dc;
-  --mat:#2f5fb3; --fis:#b0562a; --qui:#2e8a62; --len:#7a4aa8;
+  --mat:#2f5fb3; --fis:#b0562a; --qui:#2e8a62; --len:#7a4aa8; --paa:#8a3f8f;
   --radius:14px; --shadow:0 1px 2px rgba(20,30,40,.06),0 4px 14px rgba(20,30,40,.05);
   font-size:16px;
 }
@@ -10,7 +10,7 @@
   --bg:#10161d; --surface:#18212b; --surface2:#202b37; --line:#2b3846;
   --text:#e6e9ee; --muted:#9aa6b4; --brand:#9fd0ea; --brand2:#7cc0e0; --accent:#6cc1df;
   --ok:#5cc996; --okbg:#173326; --bad:#f08080; --badbg:#3a1c1f; --warn:#f0c060; --warnbg:#3a2f14;
-  --mat:#7ea6f0; --fis:#f0a07a; --qui:#6fd3a5; --len:#c39bf0;
+  --mat:#7ea6f0; --fis:#f0a07a; --qui:#6fd3a5; --len:#c39bf0; --paa:#e29be6;
   --shadow:none;
 }
 *{box-sizing:border-box}
@@ -66,13 +66,14 @@ h3{font-size:1.05rem;margin:0 0 8px}
 .tag{display:inline-block;font-size:.72rem;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--surface2);color:var(--muted);letter-spacing:.3px}
 .tag.mat{background:color-mix(in srgb,var(--mat) 15%,transparent);color:var(--mat)}
 .tag.fis{background:color-mix(in srgb,var(--fis) 15%,transparent);color:var(--fis)}
+.tag.paa{background:color-mix(in srgb,var(--paa) 15%,transparent);color:var(--paa)}
 .tag.qui{background:color-mix(in srgb,var(--qui) 15%,transparent);color:var(--qui)}
 .stripe{border-left:5px solid var(--line)}
-.stripe.mat{border-left-color:var(--mat)}.stripe.fis{border-left-color:var(--fis)}.stripe.qui{border-left-color:var(--qui)}
+.stripe.mat{border-left-color:var(--mat)}.stripe.fis{border-left-color:var(--fis)}.stripe.qui{border-left-color:var(--qui)}.stripe.paa{border-left-color:var(--paa)}
 
 .bar{height:8px;background:var(--surface2);border-radius:99px;overflow:hidden}
 .bar>i{display:block;height:100%;background:var(--accent);border-radius:99px;transition:width .25s}
-.bar.mat>i{background:var(--mat)}.bar.fis>i{background:var(--fis)}.bar.qui>i{background:var(--qui)}
+.bar.mat>i{background:var(--mat)}.bar.fis>i{background:var(--fis)}.bar.qui>i{background:var(--qui)}.bar.paa>i{background:var(--paa)}
 .dots{display:inline-flex;gap:3px;vertical-align:middle}
 .dots b{width:10px;height:10px;border-radius:3px;background:var(--surface2);display:inline-block}
 .dots b.on{background:var(--accent)}

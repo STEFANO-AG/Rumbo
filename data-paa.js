@@ -109,3 +109,139 @@ window.RUMBO_SUBJECTS = window.RUMBO_SUBJECTS || [];
     ]
   });
 })();
+
+// ---------------------------------------------------------------------------
+// ENTREGA 1 (28-11-2026): razonamiento lógico-matemático y problemas clásicos.
+// Estas preguntas tienen DATOS QUE CAMBIAN: en vez de un arreglo, son un objeto con
+// una función gen(R) que inventa los números y calcula la respuesta. R.int(a, b) da un
+// entero al azar entre a y b; R.pick(lista) elige un elemento. La primera opción que
+// devuelve gen es la correcta (la app las baraja). Si gen devuelve null, la app vuelve
+// a intentar con otros números.
+// "tipo" es el nombre que aparece en el registro de errores.
+// ---------------------------------------------------------------------------
+(function () {
+  const paa = window.RUMBO_SUBJECTS.find(x => x.id === 'paa');
+  if (!paa) return;
+  const OFI = 'Tipo frecuente · guía oficial EPN 2025-B';
+  const CLA = 'Tipo frecuente en exámenes de ingreso';
+  const NEW = 'Creado para Rumbo';
+
+  paa.topics.push({
+    id: 'p6', title: 'Razonamiento lógico-matemático', tags: ['USFQ', 'EPN'], prereq: ['m1'], minutes: 45,
+    objetivo: ['Encontrar la regla de una serie numérica', 'Descubrir el patrón de una tabla', 'Aplicar operaciones definidas con símbolos nuevos'],
+    teoria: `<p>Estas preguntas miden si descubres <b>reglas</b>, no si recuerdas fórmulas.</p>
+<ul><li><b>Series:</b> calcula las diferencias entre términos seguidos. Si son iguales, es aritmética. Si no, mira si las diferencias forman su propia serie, o si cada término se multiplica por el mismo número (geométrica).</li>
+<li><b>Tablas con patrón:</b> prueba la regla más simple con la primera fila (suma, resta, producto, doble de uno menos el otro) y comprueba con la segunda fila antes de usarla.</li>
+<li><b>Operaciones definidas</b> (a ★ b = ...): solo reemplaza. Si hay paréntesis, resuelve primero la operación de adentro.</li></ul>`,
+    ejemplo: `<p>Serie: 3, 5, 9, 15, 23, ?</p><ol><li>Diferencias: 2, 4, 6, 8</li><li>La siguiente diferencia es 10</li><li>Respuesta: 23 + 10 = <b>33</b></li></ol>`,
+    errores: ['Suponer que toda serie es aritmética sin revisar las diferencias.', 'Comprobar la regla de la tabla con una sola fila.', 'Cambiar el orden de a y b en una operación definida.'],
+    preguntas: [
+      { d: 1, src: NEW, tipo: 'Serie aritmética', gen: R => {
+        const a = R.int(2, 40), d = R.int(3, 12) * R.pick([1, 1, -1]);
+        const t = [0, 1, 2, 3, 4].map(i => a + i * d), ans = a + 5 * d;
+        return ['¿Qué número sigue? ' + t.join(', ') + ', ?', [ans, ans + d, ans - 1, ans + 1, t[4] - d].map(String),
+          'Cada término ' + (d > 0 ? 'suma ' + d : 'resta ' + (-d)) + ': ' + t[4] + (d > 0 ? ' + ' + d : ' − ' + (-d)) + ' = ' + ans + '.', 'Calcula la diferencia entre dos términos seguidos.'];
+      } },
+      { d: 2, src: NEW, tipo: 'Serie geométrica', gen: R => {
+        const a = R.int(1, 5), r = R.int(2, 4);
+        const t = [0, 1, 2, 3].map(i => a * Math.pow(r, i)), ans = a * Math.pow(r, 4);
+        return ['¿Qué número sigue? ' + t.join(', ') + ', ?', [ans, t[3] + (t[3] - t[2]), ans + r, ans - a, t[3] * (r + 1)].map(String),
+          'Cada término se multiplica por ' + r + ': ' + t[3] + ' · ' + r + ' = ' + ans + '.', 'Divide un término entre el anterior.'];
+      } },
+      { d: 3, src: NEW, tipo: 'Serie con diferencias crecientes', gen: R => {
+        const a = R.int(1, 20), k = R.int(1, 5), s = R.int(1, 3);
+        const t = [a]; for (let i = 0; i < 4; i++) t.push(t[i] + k + i * s);
+        const ans = t[4] + k + 4 * s;
+        return ['¿Qué número sigue? ' + t.join(', ') + ', ?', [ans, t[4] + k + 3 * s, ans + s, ans + 1, t[4] + 2 * (k + 3 * s)].map(String),
+          'Las diferencias son ' + [k, k + s, k + 2 * s, k + 3 * s].join(', ') + '; la siguiente es ' + (k + 4 * s) + '. ' + t[4] + ' + ' + (k + 4 * s) + ' = ' + ans + '.', 'Escribe las diferencias entre términos: forman otra serie.'];
+      } },
+      { d: 2, src: OFI, tipo: 'Operación definida', gen: R => {
+        const m = R.int(2, 5), n = R.int(2, 5), x = R.int(2, 9), y = R.int(1, 9);
+        const ans = m * x - n * y;
+        return ['Se define a ★ b = ' + m + 'a − ' + n + 'b. ¿Cuánto vale ' + x + ' ★ ' + y + '?', [ans, m * y - n * x, m * x + n * y, ans + 1, ans - 1].map(String),
+          m + '·' + x + ' − ' + n + '·' + y + ' = ' + (m * x) + ' − ' + (n * y) + ' = ' + ans + '.', 'Reemplaza a = ' + x + ' y b = ' + y + '; no cambies el orden.'];
+      } },
+      { d: 3, src: OFI, tipo: 'Operación definida anidada', gen: R => {
+        const x = R.int(1, 6), y = R.int(1, 6), z = R.int(1, 5);
+        const op = (a, b) => a * a - b;
+        const inner = op(x, y), ans = op(inner, z);
+        if (Math.abs(inner) > 30) return null;
+        return ['Se define a ◆ b = a² − b. ¿Cuánto vale (' + x + ' ◆ ' + y + ') ◆ ' + z + '?', [ans, op(x, op(y, z)), inner - z, inner * inner, ans + 1].map(String),
+          'Primero ' + x + ' ◆ ' + y + ' = ' + (x * x) + ' − ' + y + ' = ' + inner + '. Luego ' + inner + ' ◆ ' + z + ' = ' + (inner * inner) + ' − ' + z + ' = ' + ans + '.', 'Resuelve primero el paréntesis.'];
+      } },
+      { d: 2, src: OFI, tipo: 'Tabla con patrón', gen: R => {
+        const rules = [
+          { f: (a, b) => a - b, name: 'el tercero es el primero menos el segundo', inv: (a, c) => a - c },
+          { f: (a, b) => a + b, name: 'el tercero es la suma de los dos primeros', inv: (a, c) => c - a },
+          { f: (a, b) => 2 * a - b, name: 'el tercero es el doble del primero menos el segundo', inv: (a, c) => 2 * a - c }
+        ];
+        const r = R.pick(rules);
+        const rows = [0, 1].map(() => { const a = R.int(6, 20), b = R.int(1, a - 1); return [a, b, r.f(a, b)]; });
+        const a = R.int(6, 20), x = R.int(1, a - 1), c = r.f(a, x);
+        if (r.inv(a, c) !== x) return null;
+        return ['En cada fila, el tercer número se obtiene de los dos primeros con la misma regla. Fila 1: ' + rows[0].join(', ') + ' · Fila 2: ' + rows[1].join(', ') + ' · Fila 3: ' + a + ', X, ' + c + '. ¿Cuánto vale X?',
+          [x, a + c, c, x + 1, Math.abs(a - 2 * c) || x + 2].map(String),
+          'La regla es: ' + r.name + '. Con ' + a + ' y ' + c + ', X = ' + x + '.', 'Prueba suma, resta y "doble menos" con la fila 1 y comprueba con la fila 2.'];
+      } }
+    ]
+  });
+
+  paa.topics.push({
+    id: 'p7', title: 'Problemas clásicos de examen', tags: ['USFQ', 'EPN'], prereq: ['m4', 'm10'], minutes: 50,
+    objetivo: ['Resolver los tipos de problema verbal que más se repiten en exámenes de ingreso', 'Plantear la ecuación a partir del enunciado'],
+    teoria: `<p>Algunos problemas aparecen una y otra vez con otros números. Si reconoces el tipo, ya sabes el planteamiento:</p><ul>
+<li><b>Edades:</b> usa una variable para la edad de hoy; "dentro de n años" suma n a <b>ambas</b> edades.</li>
+<li><b>Gallinas y conejos:</b> una ecuación para cabezas y otra para patas.</li>
+<li><b>Trabajo conjunto:</b> suma lo que hace cada uno en 1 hora: 1/a + 1/b = 1/t.</li>
+<li><b>Porcentajes sucesivos:</b> multiplica los factores, no sumes los porcentajes.</li>
+<li><b>Promedios:</b> trabaja con la suma = promedio × cantidad.</li></ul>`,
+    ejemplo: `<p>Un caño llena un tanque en 3 h y otro en 6 h. Juntos: 1/3 + 1/6 = 1/2 del tanque por hora, así que tardan <b>2 horas</b>.</p>`,
+    errores: ['Sumar n años solo a una de las edades.', 'Promediar los tiempos en trabajo conjunto.', 'Sumar porcentajes sucesivos.'],
+    preguntas: [
+      { d: 3, src: CLA, tipo: 'Problema de edades', gen: R => {
+        const k = R.int(3, 5), m = R.int(2, k - 1), c = R.int(4, 15);
+        const n = c * (k - m) / (m - 1);
+        if (!Number.isInteger(n) || n < 2 || n > 30) return null;
+        const p = k * c;
+        return ['Un padre tiene ' + k + ' veces la edad de su hijo. Dentro de ' + n + ' años tendrá ' + (m === 2 ? 'el doble' : m + ' veces la edad') + ' de su hijo. ¿Cuántos años tiene hoy el hijo?',
+          [c, p, c + n, c * 2, c + 1].map(String),
+          k + 'h + ' + n + ' = ' + m + '(h + ' + n + ') → h = ' + c + '. Comprobación: el padre tiene ' + p + '; dentro de ' + n + ' años, ' + (p + n) + ' y ' + (c + n) + '.', 'Suma ' + n + ' años a las dos edades.'];
+      } },
+      { d: 2, src: CLA, tipo: 'Gallinas y conejos', gen: R => {
+        const g = R.int(5, 30), c = R.int(3, 25), H = g + c, P = 2 * g + 4 * c;
+        return ['En una granja hay gallinas y conejos. En total hay ' + H + ' cabezas y ' + P + ' patas. ¿Cuántos conejos hay?',
+          [c, g, c + 2, Math.max(1, c - 2), Math.round(P / 4)].map(String),
+          'Si todos fueran gallinas habría ' + (2 * H) + ' patas; sobran ' + (P - 2 * H) + ', y cada conejo aporta 2 patas más: ' + (P - 2 * H) + ' / 2 = ' + c + '.', 'Plantea g + c = ' + H + ' y 2g + 4c = ' + P + '.'];
+      } },
+      { d: 2, src: CLA, tipo: 'Trabajo conjunto', gen: R => {
+        const [a, b] = R.pick([[3, 6], [4, 12], [6, 12], [10, 15], [12, 24], [20, 30], [2, 6], [6, 3], [5, 20], [8, 24]]);
+        const t = a * b / (a + b);
+        return ['Un caño llena un tanque en ' + a + ' horas y otro lo llena en ' + b + ' horas. Si se abren los dos a la vez, ¿en cuántas horas se llena?',
+          [t, (a + b) / 2, a + b, Math.abs(b - a), Math.min(a, b) / 2 === t ? Math.min(a, b) - 1 : Math.min(a, b) / 2].map(v => R.num(v) + ' h'),
+          '1/' + a + ' + 1/' + b + ' = 1/' + R.num(t) + ' del tanque por hora; juntos tardan ' + R.num(t) + ' h.', 'Suma lo que llena cada caño en 1 hora.'];
+      } },
+      { d: 2, src: CLA, tipo: 'Porcentajes sucesivos', gen: R => {
+        const P = R.pick([80, 100, 120, 200, 250, 400, 500]), x = R.pick([10, 20, 25, 50]), y = R.pick([10, 20, 25, 40]);
+        const f = P * (1 + x / 100) * (1 - y / 100);
+        return ['Un producto cuesta $' + P + '. Su precio sube ' + x + '% y luego baja ' + y + '%. ¿Cuál es el precio final?',
+          [f, P * (1 + (x - y) / 100), P, P * (1 - y / 100), P * (1 + x / 100)].map(v => '$' + R.num(v, 2)),
+          P + ' · ' + R.num(1 + x / 100) + ' · ' + R.num(1 - y / 100) + ' = ' + R.num(f, 2) + '.', 'Multiplica por (1 + ' + x + '/100) y luego por (1 − ' + y + '/100).'];
+      } },
+      { d: 2, src: CLA, tipo: 'Promedio con un dato quitado', gen: R => {
+        const n = R.int(4, 8), A = R.int(8, 20), B = A + R.int(-4, 4);
+        const out = n * A - (n - 1) * B;
+        if (out <= 0 || B === A) return null;
+        return ['El promedio de ' + n + ' números es ' + A + '. Si se quita uno de ellos, el promedio de los demás es ' + B + '. ¿Qué número se quitó?',
+          [out, A - B, n * A, (n - 1) * B, Math.abs(A - B) * n].map(String),
+          'Suma de los ' + n + ': ' + (n * A) + '. Suma de los ' + (n - 1) + ': ' + ((n - 1) * B) + '. Se quitó ' + (n * A) + ' − ' + ((n - 1) * B) + ' = ' + out + '.', 'Trabaja con las sumas, no con los promedios.'];
+      } },
+      { d: 3, src: OFI, tipo: 'Fracción de un total', gen: R => {
+        const [p, q] = R.pick([[2, 5], [3, 5], [1, 4], [3, 4], [2, 7], [3, 8], [5, 8], [1, 3], [2, 3]]);
+        const k = R.int(2, 12), total = q * k * R.pick([1, 2, 5]), rest = total - total * p / q;
+        return ['De un rollo de tela se vende ' + p + '/' + q + ' y quedan ' + rest + ' metros. ¿Cuántos metros tenía el rollo?',
+          [total, rest * q / p, rest + p, rest * p / q, rest * q].map(v => R.num(v, 1) + ' m'),
+          'Queda ' + (q - p) + '/' + q + ' del rollo: (' + (q - p) + '/' + q + ')·L = ' + rest + ' → L = ' + total + ' m.', '¿Qué fracción del rollo queda?'];
+      } }
+    ]
+  });
+})();

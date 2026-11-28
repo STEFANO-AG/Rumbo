@@ -12,7 +12,8 @@
     sections: [
       { subj: 'mat', count: 30, minutes: 90, weight: 400 },
       { subj: 'fis', count: 20, minutes: 40, weight: 200 },
-      { subj: 'qui', count: 20, minutes: 40, weight: 200 }
+      { subj: 'qui', count: 20, minutes: 40, weight: 200 },
+      { subj: 'len', count: 20, minutes: 40, weight: 200 }
     ],
     habilitanteMin: null // la EPN define el mínimo por carrera; no lo inventamos
   };
@@ -32,14 +33,51 @@
       t.subj = s.id; TOPIC[t.id] = t; t.qids = [];
       t.preguntas.forEach((p, i) => {
         const id = t.id + '-' + (i + 1);
-        const meta = p[5] || {};
-        // c = índice de la opción correcta. Por convención es la primera (0), salvo en
-        // preguntas de orden fijo (comparación cuantitativa), donde lo indica meta.ans.
-        Q[id] = { id, subj: s.id, topic: t.id, d: p[0], q: p[1], o: p[2], s: p[3], h: p[4], c: meta.fixed ? meta.ans : 0, fixed: !!meta.fixed, src: meta.src || '' };
+        if (!Array.isArray(p)) {
+          // Pregunta con datos que cambian: { d, gen, src, tipo }. Ver inst().
+          Q[id] = { id, subj: s.id, topic: t.id, d: p.d, gen: p.gen, q: p.tipo || 'Ejercicio con datos que cambian', o: [], s: '', h: '', c: 0, fixed: false, src: p.src || '', tipo: p.tipo || '' };
+        } else {
+          const meta = p[5] || {};
+          // c = índice de la opción correcta. Por convención es la primera (0), salvo en
+          // preguntas de orden fijo (comparación cuantitativa), donde lo indica meta.ans.
+          const lect = meta.lectura && t.lecturas ? t.lecturas[meta.lectura] : null;
+          Q[id] = { id, subj: s.id, topic: t.id, d: p[0], q: p[1], o: p[2], s: p[3], h: p[4], c: meta.fixed ? meta.ans : 0, fixed: !!meta.fixed, src: meta.src || '', lectura: lect };
+        }
         t.qids.push(id);
       });
     });
   });
+
+  // ---------- Preguntas con datos que cambian ----------
+  // Un generador recibe R (números al azar reproducibles a partir de una semilla) y devuelve
+  // [enunciado, [correcta, distractores...], solución, pista]. Con la misma semilla salen
+  // los mismos números: así un examen guardado se ve igual al recargar la página.
+  function rng(seed) {
+    let a = seed >>> 0;
+    return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  }
+  function makeR(seed) {
+    const r = rng(seed);
+    const R = {
+      int: (a, b) => a + Math.floor(r() * (b - a + 1)),
+      pick: arr => arr[Math.floor(r() * arr.length)],
+      sign: () => (r() < 0.5 ? -1 : 1),
+      // Número con coma decimal, como se escribe en Ecuador.
+      num: (x, dec) => (dec == null ? String(Math.round(x * 1000) / 1000) : (Number.isInteger(x) && dec <= 1 ? String(x) : x.toFixed(dec))).replace('.', ',')
+    };
+    return R;
+  }
+  const newSeed = () => Math.floor(Math.random() * 2147483647);
+  function inst(qid, seed) {
+    const base = Q[qid];
+    if (!base.gen) return base;
+    let sd = seed == null ? 1 : seed;
+    for (let k = 0; k < 30; k++, sd = (sd * 31 + 7) % 2147483647) {
+      const out = base.gen(makeR(sd));
+      if (out && new Set(out[1]).size === out[1].length) return Object.assign({}, base, { q: out[0], o: out[1], s: out[2], h: out[3], c: 0, seed });
+    }
+    throw new Error('Generador sin opciones distintas: ' + qid);
+  }
 
   // ---------- Almacenamiento ----------
   const KEY = 'rumbo.v1';
@@ -57,6 +95,8 @@
     const b = blank();
     for (const k in b) if (S[k] === undefined) S[k] = b[k];
     if (!S.settings.epn) S.settings.epn = b.settings.epn;
+    // Entrega 1: quien ya tenía guardado el formato sin Lenguaje recibe esa sección.
+    if (!S.settings.epn.sections.some(x => x.subj === 'len')) S.settings.epn.sections.push({ subj: 'len', count: 20, minutes: 40, weight: 200 });
   }
   let storageOk = true;
   function save() {
@@ -137,8 +177,9 @@
         e.count++; e.box = 0; e.last = Date.now(); e.due = startOfDay(Date.now()) + DAY;
         e.status = e.status === 'resuelto' ? 'reabierto' : 'pendiente';
         if (opts.cat) e.cat = opts.cat;
+        if (opts.seed != null) e.seed = opts.seed;
       } else {
-        S.errors[qid] = { qid, topic: q.topic, subj: q.subj, cat: opts.cat || (mode === 'exam' || mode === 'diag' ? 'examen' : ''), box: 0, count: 1, created: Date.now(), last: Date.now(), due: startOfDay(Date.now()) + DAY, status: 'pendiente', reviews: 0 };
+        S.errors[qid] = { qid, topic: q.topic, subj: q.subj, cat: opts.cat || (mode === 'exam' || mode === 'diag' ? 'examen' : ''), box: 0, count: 1, created: Date.now(), last: Date.now(), due: startOfDay(Date.now()) + DAY, status: 'pendiente', reviews: 0, seed: opts.seed };
       }
     }
     save();
@@ -150,6 +191,7 @@
   // Problema equivalente: otra pregunta del mismo tema y dificultad; si no hay, la original.
   function equivalentOf(qid) {
     const q = Q[qid], t = TOPIC[q.topic];
+    if (q.gen) return qid; // con otros números ya es un problema equivalente
     const same = t.qids.filter(id => id !== qid && Q[id].d === q.d);
     const any = t.qids.filter(id => id !== qid);
     const e = S.errors[qid];
@@ -276,7 +318,7 @@
         return `<div class="card link stripe ${s.color}" onclick="location.hash='#/materia/${s.id}'"><span class="tag ${s.color}">${s.tags.join(' · ')}</span><h3 style="margin-top:8px">${s.name}</h3><p class="small muted">${s.desc}</p>
           <div class="bar ${s.color}"><i style="width:${(m.avg / 5) * 100}%"></i></div><p class="small muted">${m.started} de ${m.count} temas empezados · ${m.dominated} dominados</p></div>`;
       }).join('')}
-      <div class="card" style="opacity:.75"><span class="tag">Próximamente</span><h3 style="margin-top:8px">Lenguaje y Aptitud Verbal</h3><p class="small muted">Lenguaje (20% en la EPN) y la parte verbal de la PAA de la USFQ. Se agregarán en la siguiente fase.</p></div>
+      ${SUBJ.len ? '' : '<div class="card" style="opacity:.75"><span class="tag">Próximamente</span><h3 style="margin-top:8px">Lenguaje y Aptitud Verbal</h3><p class="small muted">Lenguaje (20% en la EPN) y la parte verbal de la PAA de la USFQ. Se agregarán en la siguiente fase.</p></div>'}
       </div>`);
   };
 
@@ -324,18 +366,25 @@
       else if (state.sel === oi) cls = 'sel';
       return `<button class="opt ${cls}" data-o="${oi}" ${state.checked ? 'disabled' : ''}><span class="l">${LETTERS[i]}</span><span>${esc(q.o[oi])}</span></button>`;
     }).join('');
-    return `<p class="q">${esc(q.q)}</p><div class="opts">${opts}</div>`;
+    return `${lecturaBox(q)}<p class="q">${esc(q.q)}</p><div class="opts">${opts}</div>`;
   }
+  // Texto de lectura (comprensión lectora): se muestra encima de la pregunta.
+  function lecturaBox(q) {
+    if (!q.lectura) return '';
+    return `<div class="lectura"><div class="small muted"><b>Lectura:</b> ${esc(q.lectura.titulo)}</div>${q.lectura.texto.split(/\n\s*\n/).map(p => `<p>${esc(p.trim())}</p>`).join('')}</div>`;
+  }
+  const genTag = q => q.gen ? '<span class="tag">Datos que cambian</span>' : '';
 
   function runPractice(qids, opts) {
     // opts: {title, back, mode, origins, onDone}
     if (cleanup) { cleanup(); cleanup = null; }
     let i = 0, results = [], finished = false;
-    let st, order, t0;
-    function setup() { st = { sel: null, checked: false, help: false, showHint: false, cat: '' }; order = orderFor(Q[qids[i]]); t0 = Date.now(); }
+    let st, order, t0, cur;
+    // Si la pregunta tiene datos que cambian, se crea con una semilla nueva cada vez.
+    function setup() { st = { sel: null, checked: false, help: false, showHint: false, cat: '' }; cur = inst(qids[i], newSeed()); order = orderFor(cur); t0 = Date.now(); }
     setup();
     function draw() {
-      const q = Q[qids[i]], s = SUBJ[q.subj];
+      const q = cur, s = SUBJ[q.subj];
       let fb = '';
       if (st.checked) {
         const ok = st.sel === q.c;
@@ -344,7 +393,7 @@
       }
       setView(`<p class="small"><a href="${opts.back}">← Salir</a></p>
         <div class="row"><span class="tag ${s.color}">${s.name}</span><span class="muted small">${esc(opts.title)} · ${i + 1} de ${qids.length}</span>
-        ${opts.mode === 'review' ? '<span class="tag">Problema equivalente a uno que fallaste</span>' : ''}${q.src ? `<span class="tag">${esc(q.src)}</span>` : ''}<span class="spacer"></span>${dots(Q[qids[i]].d)}</div>
+        ${opts.mode === 'review' ? '<span class="tag">Problema equivalente a uno que fallaste</span>' : ''}${q.src ? `<span class="tag">${esc(q.src)}</span>` : ''}${genTag(q)}<span class="spacer"></span>${dots(q.d)}</div>
         <div class="bar" style="margin:12px 0 20px"><i style="width:${(i / qids.length) * 100}%"></i></div>
         <div class="card">${questionCard(q, order, st)}
           ${st.showHint && !st.checked ? `<div class="notice info"><b>Pista:</b> ${esc(q.h)}</div>` : ''}
@@ -371,9 +420,9 @@
     }
     function check(sel) {
       st.checked = true;
-      const ok = sel === Q[qids[i]].c;
+      const ok = sel === cur.c;
       results.push({ qid: qids[i], ok, help: st.help });
-      record(qids[i], ok, { mode: opts.mode, help: st.help, ms: Date.now() - t0, cat: st.cat, origin: opts.origins ? opts.origins[i] : null });
+      record(qids[i], ok, { mode: opts.mode, help: st.help, ms: Date.now() - t0, cat: st.cat, origin: opts.origins ? opts.origins[i] : null, seed: cur.seed });
       draw();
     }
     function next() {
@@ -454,7 +503,7 @@
         <div class="card"><h3>Por qué fallas</h3>${Object.keys(byCat).length ? Object.entries(byCat).map(([c, n]) => `<p style="margin:6px 0">${c === 'sin' ? 'Sin clasificar' : ERROR_CATS[c]} <span class="muted small">· ${n}</span></p>`).join('') : '<p class="muted">Nada abierto.</p>'}</div></div>` : ''}
       <div class="row" style="margin-bottom:12px">${['abiertos', 'resueltos', 'todos'].map(f => `<a class="btn small ${filter === f ? 'primary' : ''}" href="#/errores/${f}">${f[0].toUpperCase() + f.slice(1)}</a>`).join('')}</div>
       ${list.length ? `<div class="card" style="padding:0">${list.map(e => {
-        const q = Q[e.qid], s = SUBJ[e.subj];
+        const q = inst(e.qid, e.seed), s = SUBJ[e.subj];
         return `<div class="topic" style="cursor:default"><div class="t"><span class="tag ${s.color}">${s.name}</span> <span class="small muted">${esc(TOPIC[e.topic].title)}</span>
           <div style="margin-top:4px">${esc(q.q)}</div>
           <div class="small muted">Respuesta correcta: <b>${esc(q.o[q.c])}</b> · ${e.cat ? ERROR_CATS[e.cat] : 'sin clasificar'} · fallada ${e.count} ${e.count > 1 ? 'veces' : 'vez'} · ${e.status}${e.due ? ' · repaso ' + relDay(e.due) : ''}</div></div>
@@ -464,9 +513,9 @@
   };
 
   // ---------- Exámenes: diagnóstico, mini simulacro y simulacro EPN ----------
-  function pickQuestions(sid, count, exclude) {
+  function pickQuestions(sid, count, exclude, topicIds) {
     const s = SUBJ[sid];
-    const byTopic = s.topics.map(t => shuffle(t.qids.filter(id => !exclude || !exclude.has(id))));
+    const byTopic = s.topics.filter(t => !topicIds || topicIds.includes(t.id)).map(t => shuffle(t.qids.filter(id => !exclude || !exclude.has(id))));
     const out = [];
     let k = 0;
     while (out.length < count && byTopic.some(a => a.length)) {
@@ -476,10 +525,12 @@
     }
     return out;
   }
-  function makeSection(sid, count, minutes, weight, qids) {
-    qids = qids || pickQuestions(sid, count);
-    const order = {}; qids.forEach(id => order[id] = orderFor(Q[id]));
-    return { subj: sid, qids, order, answers: {}, marked: {}, minutes, weight, requested: count, startedAt: null, endsAt: null, submitted: false };
+  function makeSection(sid, count, minutes, weight, qids, topicIds) {
+    qids = qids || pickQuestions(sid, count, null, topicIds);
+    // La semilla de cada pregunta se guarda para que, al recargar, los datos sean los mismos.
+    const seeds = {}, order = {};
+    qids.forEach(id => { seeds[id] = newSeed(); order[id] = orderFor(inst(id, seeds[id])); });
+    return { subj: sid, qids, seeds, order, answers: {}, marked: {}, minutes, weight, requested: count, startedAt: null, endsAt: null, submitted: false };
   }
   function startExam(ex) {
     if (S.active && !confirm('Tienes otro examen sin terminar. ¿Descartarlo y empezar este?')) return go('#/examen');
@@ -499,6 +550,10 @@
   function startPAA() {
     startExam({ kind: 'paa', subj: 'paa', name: 'Simulacro PAA · Razonamiento Matemático', sections: [makeSection('paa', 25, 30, null)] });
   }
+  // Razonamiento Verbal de la PAA: una parte de 30 preguntas en 35 minutos (guía USFQ).
+  function startPAAVerbal() {
+    startExam({ kind: 'paa', subj: 'len', name: 'Simulacro PAA · Razonamiento Verbal', sections: [makeSection('len', 30, 35, null, null, ['v1', 'v2', 'v3', 'v6'])] });
+  }
   function startEPN() {
     const bp = S.settings.epn;
     startExam({ kind: 'epn', name: bp.name, cycle: bp.cycle, habilitanteMin: bp.habilitanteMin, sections: bp.sections.filter(x => SUBJ[x.subj] && x.count > 0).map(x => makeSection(x.subj, x.count, x.minutes, x.weight)) });
@@ -510,12 +565,12 @@
     setView(`<h1>Simulacros</h1><p class="sub">Modo examen: sin pistas ni respuestas hasta entregar. Tus respuestas se guardan solas aunque cierres el navegador.</p>
       <div class="grid g2">
         <div class="card stripe"><span class="tag">EPN · ciclo ${esc(bp.cycle)}</span><h3 style="margin-top:8px">${esc(bp.name)}</h3>
-          <p class="small muted">${bp.sections.map(x => `${SUBJ[x.subj].name}: ${x.count} preguntas en ${x.minutes} min`).join(' · ')}. Matemática va primero y es habilitante. Lenguaje se agregará en la próxima fase.</p>
+          <p class="small muted">${bp.sections.filter(x => SUBJ[x.subj]).map(x => `${SUBJ[x.subj].name}: ${x.count} preguntas en ${x.minutes} min`).join(' · ')}. Matemática va primero y es habilitante.${SUBJ.len ? '' : ' Lenguaje se agregará en la próxima fase.'}</p>
           <p class="small muted">Los tiempos vienen de los lineamientos 2026-B y puedes cambiarlos en Ajustes. Con el banco actual algunas secciones pueden tener menos preguntas que las pedidas.</p>
           <button class="btn primary" id="epn">Empezar simulacro EPN</button></div>
         <div class="card stripe"><span class="tag">USFQ · PAA</span><h3 style="margin-top:8px">Simulacro PAA</h3>
-          ${SUBJ.paa ? `<p class="small muted">Razonamiento Matemático con el formato de la guía de la USFQ: 25 preguntas en 30 minutos, cinco opciones por pregunta y ejercicios de comparación. La parte verbal se agregará después. Para el formato oficial, usa también el simulador del Portal de Admisiones.</p>
-          <button class="btn primary" id="paa">Empezar simulacro PAA matemático</button>`
+          ${SUBJ.paa ? `<p class="small muted">Partes con el formato de la guía de la USFQ. Matemático: 25 preguntas en 30 minutos, con cinco opciones y comparaciones. Verbal: 30 preguntas en 35 minutos, con lecturas, oraciones, analogías y redacción. Para el formato oficial, usa también el simulador del Portal de Admisiones.</p>
+          <div class="row"><button class="btn primary" id="paa">Empezar simulacro PAA matemático</button>${SUBJ.len ? '<button class="btn" id="paav">Empezar simulacro PAA verbal</button>' : ''}</div>`
           : `<p class="small muted">Falta el archivo js/data-paa.js en index.html.</p><button class="btn" disabled>No disponible</button>`}</div>
         <div class="card"><h3>Mini simulacros por materia</h3><p class="small muted">10 preguntas en 25 minutos.</p><div class="row">${SUBJECTS.map(s => `<button class="btn small" data-mini="${s.id}">${s.name}</button>`).join('')}</div></div>
         <div class="card"><h3>Diagnósticos</h3><p class="small muted">Sin tiempo. Puedes repetirlos para medir tu avance.</p><div class="row">${SUBJECTS.map(s => `<button class="btn small" data-diag="${s.id}">${s.name}</button>`).join('')}</div></div>
@@ -523,6 +578,7 @@
       <h2>Historial</h2>${hist.length ? `<div class="card"><table><tr><th>Fecha</th><th>Prueba</th><th>Resultado</th><th></th></tr>${hist.map(e => `<tr><td>${fmtDateTime(e.finished)}</td><td>${esc(e.name)}</td><td>${e.summary}</td><td><a href="#/resultado/${e.id}">Ver</a></td></tr>`).join('')}</table></div>` : '<div class="card empty">Aún no has hecho ningún simulacro ni diagnóstico.</div>'}`);
     $('#epn').onclick = startEPN;
     if ($('#paa')) $('#paa').onclick = startPAA;
+    if ($('#paav')) $('#paav').onclick = startPAAVerbal;
     app().querySelectorAll('[data-mini]').forEach(b => b.onclick = () => startMini(b.dataset.mini));
     app().querySelectorAll('[data-diag]').forEach(b => b.onclick = () => startDiagnostic(b.dataset.diag));
   };
@@ -553,14 +609,14 @@
     }
     function abandon() { if (confirm('¿Abandonar? Se perderán las respuestas de este examen.')) { S.active = null; save(); go('#/simulacros'); } }
     function draw() {
-      const s = sec(), subj = SUBJ[s.subj], qid = s.qids[ex.idx], q = Q[qid];
+      const s = sec(), subj = SUBJ[s.subj], qid = s.qids[ex.idx], q = inst(qid, s.seeds && s.seeds[qid]);
       const order = s.order[qid];
       const answered = Object.keys(s.answers).length;
       const opts = order.map((oi, i) => `<button class="opt ${s.answers[qid] === oi ? 'sel' : ''}" data-o="${oi}"><span class="l">${LETTERS[i]}</span><span>${esc(q.o[oi])}</span></button>`).join('');
       setView(`<div class="exam-top"><div class="row"><span class="tag ${subj.color}">${subj.name}</span><b>${esc(ex.name)}</b><span class="spacer"></span>
           <span class="muted small">${answered}/${s.qids.length} contestadas</span>${s.endsAt ? `<span class="timer" id="tm">${fmt(remaining())}</span>` : ''}</div>
           <div class="qnav">${s.qids.map((id, i) => `<button data-i="${i}" class="${s.answers[id] != null ? 'ans' : ''} ${s.marked[id] ? 'mk' : ''} ${i === ex.idx ? 'cur' : ''}" aria-label="Pregunta ${i + 1}">${i + 1}</button>`).join('')}</div></div>
-        <div class="card"><p class="muted small">Pregunta ${ex.idx + 1} de ${s.qids.length}</p><p class="q">${esc(q.q)}</p><div class="opts">${opts}</div>
+        <div class="card"><p class="muted small">Pregunta ${ex.idx + 1} de ${s.qids.length}</p>${lecturaBox(q)}<p class="q">${esc(q.q)}</p><div class="opts">${opts}</div>
           <div class="row" style="margin-top:18px"><button class="btn" id="prev" ${ex.idx === 0 ? 'disabled' : ''}>← Anterior</button>
           <button class="btn" id="mark">${s.marked[qid] ? 'Quitar marca' : 'Marcar para revisar'}</button>
           ${s.answers[qid] != null ? '<button class="btn" id="clr">Borrar respuesta</button>' : ''}
@@ -596,7 +652,7 @@
         s.qids.forEach(id => {
           const a = s.answers[id];
           if (a == null && ex.kind === 'diag') return;
-          record(id, a === Q[id].c, { mode: ex.kind === 'diag' ? 'diag' : 'exam', help: false });
+          record(id, a === Q[id].c, { mode: ex.kind === 'diag' ? 'diag' : 'exam', help: false, seed: s.seeds && s.seeds[id] });
         });
       });
       const done = ex.sections.filter(s => s.submitted);
@@ -634,7 +690,7 @@
     if (ex.kind === 'epn') {
       const max = ex.sections.reduce((a, s) => a + s.weight, 0);
       head = `<div class="card hero"><div class="muted small">Estimación de práctica Rumbo (no es un puntaje oficial)</div><div class="big">${ex.estimate} / ${max}</div>
-        <p class="muted small">Se calcula como (aciertos / preguntas) × peso de cada área. La EPN real incluye Lenguaje y define el mínimo habilitante de Matemática por carrera.</p></div>`;
+        <p class="muted small">Se calcula como (aciertos / preguntas) × peso de cada área. La EPN define el mínimo habilitante de Matemática por carrera.</p></div>`;
       if (ex.stoppedByHabilitante) head += `<div class="notice">No alcanzaste el mínimo de Matemática que configuraste (${ex.habilitanteMin}), así que el simulacro terminó ahí, como en la EPN.</div>`;
     } else if (ex.kind === 'diag') {
       head = `<div class="card hero"><h3>Tu punto de partida en ${SUBJ[ex.subj].name}</h3><p class="muted">Esto no es una nota. Con pocas preguntas por tema, es una primera señal; tu nivel se irá precisando con la práctica.</p></div>`;
@@ -645,7 +701,7 @@
       <h2>Por tema</h2><div class="card"><table><tr><th>Tema</th><th>Aciertos</th><th>En blanco</th><th></th></tr>${Object.entries(topicStats).map(([t, v]) => `<tr><td>${esc(TOPIC[t].title)}</td><td>${v.ok}/${v.n}</td><td>${v.blank}</td><td><a href="#/tema/${t}">Estudiar</a></td></tr>`).join('')}</table></div>
       ${weakest.length ? `<h2>Plan de recuperación</h2><div class="card"><ol>${weakest.slice(0, 4).map(([t]) => `<li><a href="#/tema/${t}">${esc(TOPIC[t].title)}</a>: repasa la lección y haz una ronda de práctica.</li>`).join('')}</ol><p class="small muted">Las preguntas falladas ya están en tu registro de errores para repasarlas desde mañana.</p></div>` : ''}
       <h2>Revisión de respuestas</h2><div class="card" style="padding:0">${done.map(s => s.qids.map((id, i) => {
-        const q = Q[id], a = s.answers[id], ok = a === q.c;
+        const q = inst(id, s.seeds && s.seeds[id]), a = s.answers[id], ok = a === q.c;
         return `<div class="topic" style="cursor:default;align-items:flex-start"><span class="tag ${ok ? '' : ''}" style="background:${ok ? 'var(--okbg)' : 'var(--badbg)'};color:${ok ? 'var(--ok)' : 'var(--bad)'}">${ok ? '✓' : a == null ? '—' : '✗'}</span>
           <div class="t"><div>${esc(q.q)}</div><div class="small muted">${a != null && !ok ? 'Tu respuesta: ' + esc(q.o[a]) + ' · ' : ''}Correcta: <b>${esc(q.o[q.c])}</b></div><div class="small">${esc(q.s)}</div></div></div>`;
       }).join('')).join('')}</div>`);
@@ -663,9 +719,9 @@
         <div class="card"><div class="muted small">Días que estudiaste</div><div class="big">${days}</div><p class="small muted">${Object.values(S.errors).filter(e => e.status === 'resuelto').length} errores resueltos</p></div>
       </div>
       <h2>Ruta EPN</h2><div class="card">${SUBJECTS.filter(s => s.tags.includes('EPN')).map(s => { const m = subjectMastery(s.id); return `<div style="margin:10px 0"><div class="row"><b>${s.name}</b><span class="spacer"></span><span class="small muted">nivel ${m.avg.toFixed(1)}/5 · ${m.dominated}/${m.count} dominados</span></div><div class="bar ${s.color}"><i style="width:${m.avg / 5 * 100}%"></i></div></div>`; }).join('')}
-        <div style="margin:10px 0;opacity:.6"><div class="row"><b>Lenguaje</b><span class="spacer"></span><span class="small muted">próximamente</span></div><div class="bar"><i style="width:0"></i></div></div>
+        ${SUBJ.len ? '' : '<div style="margin:10px 0;opacity:.6"><div class="row"><b>Lenguaje</b><span class="spacer"></span><span class="small muted">próximamente</span></div><div class="bar"><i style="width:0"></i></div></div>'}
         ${epn.length ? `<p class="small">Último simulacro EPN: <b>${epn[epn.length - 1].estimate}</b> (estimación de práctica, ${fmtDate(epn[epn.length - 1].finished)}).${epn.length > 1 ? ' Anterior: ' + epn[epn.length - 2].estimate + '.' : ''}</p>` : '<p class="small muted">Haz un simulacro EPN para ver tu estimación de práctica.</p>'}</div>
-      <h2>Ruta USFQ (PAA)</h2><div class="card">${SUBJ.paa ? (() => { const m = subjectMastery('paa'); return `<div style="margin:10px 0"><div class="row"><b>PAA Matemático</b><span class="spacer"></span><span class="small muted">nivel ${m.avg.toFixed(1)}/5 · ${m.dominated}/${m.count} dominados</span></div><div class="bar paa"><i style="width:${m.avg / 5 * 100}%"></i></div></div>`; })() : ''}<p class="small">La Aptitud Matemática de la PAA se apoya en los mismos temas de Matemática (nivel medio ${subjectMastery('mat').avg.toFixed(1)}/5). La Aptitud Verbal y la Redacción se agregarán en la próxima fase. Rumbo no convierte tus porcentajes a la escala de 2400 porque no hay un modelo de equivalencia validado.</p></div>
+      <h2>Ruta USFQ (PAA)</h2><div class="card">${SUBJ.paa ? (() => { const m = subjectMastery('paa'); return `<div style="margin:10px 0"><div class="row"><b>PAA Matemático</b><span class="spacer"></span><span class="small muted">nivel ${m.avg.toFixed(1)}/5 · ${m.dominated}/${m.count} dominados</span></div><div class="bar paa"><i style="width:${m.avg / 5 * 100}%"></i></div></div>`; })() : ''}${SUBJ.len ? (() => { const m = subjectMastery('len'); return `<div style="margin:10px 0"><div class="row"><b>Verbal y Redacción</b><span class="spacer"></span><span class="small muted">nivel ${m.avg.toFixed(1)}/5 · ${m.dominated}/${m.count} dominados</span></div><div class="bar len"><i style="width:${m.avg / 5 * 100}%"></i></div></div>`; })() : ''}<p class="small">La Aptitud Matemática de la PAA se apoya también en los temas de Matemática (nivel medio ${subjectMastery('mat').avg.toFixed(1)}/5).${SUBJ.len ? '' : ' La Aptitud Verbal y la Redacción se agregarán en la próxima fase.'} Rumbo no convierte tus porcentajes a la escala de 2400 porque no hay un modelo de equivalencia validado.</p></div>
       <h2>Detalle por tema</h2><div class="card"><table><tr><th>Tema</th><th>Estado</th><th>Nivel</th><th>Aciertos (sin ayuda)</th></tr>${SUBJECTS.map(s => s.topics.map(t => { const m = mastery(t.id); return `<tr><td><span class="tag ${s.color}">${s.short}</span> <a href="#/tema/${t.id}">${esc(t.title)}</a></td><td>${m.status}${m.provisional ? ' (provisional)' : ''}</td><td>${dots(m.level)}</td><td>${m.n ? pct(m.acc) + ' en ' + m.n : '—'}</td></tr>`; }).join('')).join('')}</table>
       <p class="small muted">Cómo se calcula: se miran tus últimos 10 intentos sin pista. Nivel 2 = 50%+ en 3 intentos; 3 = 70%+ en 4; 4 (dominado) = 85%+ en 5; 5 = 95%+ en 8 incluyendo difíciles. "Provisional" significa que más del 40% de tus intentos recientes fueron con ayuda.</p></div>`);
   };
@@ -702,7 +758,7 @@
       </div>
       <h2>Formato del simulacro EPN</h2><div class="card"><p class="small muted">Valores del ciclo ${esc(bp.cycle)}. Cámbialos cuando la EPN publique los lineamientos de tu ciclo.</p>
         <div class="row" style="margin-bottom:10px"><label for="cy">Ciclo</label><input type="text" id="cy" value="${esc(bp.cycle)}" style="width:120px"></div>
-        <table><tr><th>Área</th><th>Preguntas</th><th>Minutos</th><th>Peso (puntos)</th></tr>${bp.sections.map((x, i) => `<tr><td>${SUBJ[x.subj].name}</td><td><input type="number" min="0" max="60" data-f="count" data-i="${i}" value="${x.count}"></td><td><input type="number" min="1" max="300" data-f="minutes" data-i="${i}" value="${x.minutes}"></td><td><input type="number" min="0" max="1000" data-f="weight" data-i="${i}" value="${x.weight}"></td></tr>`).join('')}</table>
+        <table><tr><th>Área</th><th>Preguntas</th><th>Minutos</th><th>Peso (puntos)</th></tr>${bp.sections.map((x, i) => !SUBJ[x.subj] ? '' : `<tr><td>${SUBJ[x.subj].name}</td><td><input type="number" min="0" max="60" data-f="count" data-i="${i}" value="${x.count}"></td><td><input type="number" min="1" max="300" data-f="minutes" data-i="${i}" value="${x.minutes}"></td><td><input type="number" min="0" max="1000" data-f="weight" data-i="${i}" value="${x.weight}"></td></tr>`).join('')}</table>
         <div class="row" style="margin-top:12px"><label for="hab">Mínimo habilitante de Matemática (aciertos)</label><input type="number" id="hab" min="0" max="60" value="${bp.habilitanteMin == null ? '' : bp.habilitanteMin}" placeholder="—"><span class="small muted">Déjalo vacío si aún no conoces el oficial de tu carrera.</span></div>
         <div class="row" style="margin-top:14px"><button class="btn primary" id="svbp">Guardar formato</button><button class="btn" id="rsbp">Restaurar 2026-B</button><span class="small muted" id="bpmsg"></span></div></div>
       <h2>Zona de peligro</h2><div class="card"><p class="small muted">Borra todo tu progreso de este navegador. Descarga una copia antes.</p><button class="btn danger" id="wipe">Borrar todo mi progreso</button></div>`);
